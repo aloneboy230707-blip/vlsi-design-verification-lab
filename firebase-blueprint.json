@@ -1,0 +1,137 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile and career preferences",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID matching document ID",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the student",
+          "maxLength": 100
+        },
+        "targetRole": {
+          "type": "string",
+          "description": "Target VLSI career role",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Profile update timestamp"
+        }
+      },
+      "required": ["uid", "email", "displayName", "targetRole"]
+    },
+    "SavedDesign": {
+      "title": "SavedDesign",
+      "description": "Student saved Verilog RTL module designs",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Design unique ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner student UID",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Design module title",
+          "maxLength": 100
+        },
+        "moduleId": {
+          "type": "string",
+          "description": "Associated circuit module identifier",
+          "maxLength": 50
+        },
+        "verilogCode": {
+          "type": "string",
+          "description": "User written Verilog HDL code",
+          "maxLength": 10000
+        },
+        "notes": {
+          "type": "string",
+          "description": "User annotations and simulation notes",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Modification timestamp"
+        }
+      },
+      "required": ["id", "userId", "title", "moduleId", "verilogCode"]
+    },
+    "UserProgress": {
+      "title": "UserProgress",
+      "description": "Student placement learning scores and completed curriculum track records",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Student UID",
+          "maxLength": 128
+        },
+        "logicScore": {
+          "type": "number",
+          "description": "Cumulative points earned in Boolean logic playground"
+        },
+        "completedGateQuizzes": {
+          "type": "number",
+          "description": "Count of successfully solved practice exercises"
+        },
+        "completedLessonIds": {
+          "type": "array",
+          "description": "List of completed learning library topic IDs"
+        },
+        "practiceStreakDays": {
+          "type": "number",
+          "description": "Consecutive days of practice"
+        },
+        "testVectorsRunCount": {
+          "type": "number",
+          "description": "Total verification test vectors executed"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last synchronization timestamp"
+        }
+      },
+      "required": ["userId", "logicScore", "completedGateQuizzes"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "Private user profile document"
+    },
+    "/users/{userId}/designs/{designId}": {
+      "schema": { "$ref": "SavedDesign" },
+      "description": "Private user saved Verilog RTL designs"
+    },
+    "/users/{userId}/progress/state": {
+      "schema": { "$ref": "UserProgress" },
+      "description": "Private user progress, scores, and lesson completions"
+    }
+  }
+}

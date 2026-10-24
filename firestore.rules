@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny all unspecified reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Security Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Blueprint for UserProfile
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'targetRole']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'targetRole', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid == userId && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() <= 256 &&
+        data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+        data.targetRole is string && data.targetRole.size() > 0 && data.targetRole.size() <= 100;
+    }
+
+    // Validation Blueprint for SavedDesign
+    function isValidSavedDesign(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'moduleId', 'verilogCode']) &&
+        data.keys().hasOnly(['id', 'userId', 'title', 'moduleId', 'verilogCode', 'notes', 'createdAt', 'updatedAt']) &&
+        data.id is string && isValidId(data.id) &&
+        data.userId is string && data.userId == userId &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+        data.moduleId is string && data.moduleId.size() > 0 && data.moduleId.size() <= 50 &&
+        data.verilogCode is string && data.verilogCode.size() <= 10000 &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    // Validation Blueprint for UserProgress
+    function isValidUserProgress(data, userId) {
+      return data.keys().hasAll(['userId', 'logicScore', 'completedGateQuizzes']) &&
+        data.keys().hasOnly(['userId', 'logicScore', 'completedGateQuizzes', 'completedLessonIds', 'practiceStreakDays', 'testVectorsRunCount', 'updatedAt']) &&
+        data.userId is string && data.userId == userId &&
+        data.logicScore is number && data.logicScore >= 0 &&
+        data.completedGateQuizzes is number && data.completedGateQuizzes >= 0 &&
+        (!('completedLessonIds' in data) || (data.completedLessonIds is list && data.completedLessonIds.size() <= 50)) &&
+        (!('practiceStreakDays' in data) || (data.practiceStreakDays is number && data.practiceStreakDays >= 0)) &&
+        (!('testVectorsRunCount' in data) || (data.testVectorsRunCount is number && data.testVectorsRunCount >= 0));
+    }
+
+    // Collection: User Profile
+    match /users/{userId} {
+      allow get: if isSignedIn() && isOwner(userId) && isValidId(userId);
+      allow list: if false; // Deny user enumeration
+      allow create: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId) &&
+        incoming().uid == existing().uid;
+      allow delete: if isSignedIn() && isOwner(userId) && isValidId(userId);
+
+      // Subcollection: Saved Verilog RTL Designs
+      match /designs/{designId} {
+        allow get: if isSignedIn() && isOwner(userId);
+        allow list: if isSignedIn() && isOwner(userId);
+        allow create: if isSignedIn() && isOwner(userId) && isValidId(designId) && isValidSavedDesign(incoming(), userId);
+        allow update: if isSignedIn() && isOwner(userId) && isValidId(designId) && isValidSavedDesign(incoming(), userId) &&
+          incoming().userId == existing().userId && incoming().id == existing().id;
+        allow delete: if isSignedIn() && isOwner(userId) && isValidId(designId);
+      }
+
+      // Subcollection: Learning Progress and Scores
+      match /progress/{docId} {
+        allow get: if isSignedIn() && isOwner(userId);
+        allow list: if isSignedIn() && isOwner(userId);
+        allow create: if isSignedIn() && isOwner(userId) && isValidId(docId) && isValidUserProgress(incoming(), userId);
+        allow update: if isSignedIn() && isOwner(userId) && isValidId(docId) && isValidUserProgress(incoming(), userId) &&
+          incoming().userId == existing().userId;
+        allow delete: if isSignedIn() && isOwner(userId) && isValidId(docId);
+      }
+    }
+  }
+}

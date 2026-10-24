@@ -1,0 +1,6 @@
+{
+  "name": "VLSI Design & Verification Lab",
+  "description": "Educational platform for ECE students preparing for VLSI design and verification placements with digital logic sandboxes, Verilog practice, and test-vector evaluation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
